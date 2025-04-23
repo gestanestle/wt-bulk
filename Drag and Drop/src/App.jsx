@@ -2,9 +2,32 @@ import React, { useState } from "react";
 import { Button, Upload, message, Spin, Table } from "antd";
 import { DeleteOutlined, FileOutlined } from "@ant-design/icons"; // Import FileOutlined icon
 import Papa from "papaparse";
-import UploadImage from "./assets/Upload.png";
+import UploadImage from "./assets/upload.png";
+
+function uploadCSV(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  fetch("http://localhost:8000/api/v2/places/bulk/file", {
+    method: "POST",
+    body: formData,
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((data) => {
+      console.log("Upload successful:", data);
+    })
+    .catch((error) => {
+      console.error("Error uploading file:", error);
+    });
+}
 
 export default function App() {
+  const [file, setFile] = useState();
   const [fileList, setFileList] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [csvData, setCsvData] = useState([]);
@@ -19,12 +42,17 @@ export default function App() {
       return;
     }
 
+    setFile(file);
+
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: (result) => {
         if (result.data.length > 0) {
-          setCsvData((prevData) => [...prevData, { fileName: file.name, data: result.data }]);
+          setCsvData((prevData) => [
+            ...prevData,
+            { fileName: file.name, data: result.data },
+          ]);
           setIsFileListVisible(true);
           message.success("File uploaded successfully! Review it below.");
         } else {
@@ -46,7 +74,11 @@ export default function App() {
       fileData.data.forEach((row, index) => {
         const invalidColumns = Object.keys(row).filter((key) => !row[key]);
         if (invalidColumns.length > 0) {
-          invalidRows.push({ fileName: fileData.fileName, index, columns: invalidColumns });
+          invalidRows.push({
+            fileName: fileData.fileName,
+            index,
+            columns: invalidColumns,
+          });
         }
       });
     });
@@ -62,6 +94,7 @@ export default function App() {
 
     if (fileList.length > 0) {
       setUploading(true);
+      uploadCSV(file);
       setTimeout(() => {
         message.success("Files uploaded successfully!");
         console.log("Uploaded files:", fileList);
@@ -186,14 +219,13 @@ export default function App() {
                 </h2>
                 <ul className="list-none">
                   <li className="mb-2">
-                    1. Ensure your files are saved with the extension .csv before uploading.
+                    1. Ensure your files are saved with the extension .csv
+                    before uploading.
                   </li>
                   <li className="mb-2">
                     2. Make sure your files have correct column headers.
                   </li>
-                  <li>
-                    3. Upload CSV files with at least 500 records each.
-                  </li>
+                  <li>3. Upload CSV files with at least 500 records each.</li>
                 </ul>
               </div>
               <Button
@@ -201,7 +233,11 @@ export default function App() {
                 download="./assets/upload.png"
                 target="_blank"
                 className="mt-9"
-                style={{ backgroundColor: "#ffb100", color: "white", border: "none" }}
+                style={{
+                  backgroundColor: "#ffb100",
+                  color: "white",
+                  border: "none",
+                }}
               >
                 Download CSV Template
               </Button>
@@ -213,7 +249,13 @@ export default function App() {
             <div style={{ width: "100%", marginTop: "20px" }}>
               <div className="mt-4">
                 <h3 className="font-bold text-[#0F5862]">Uploaded Files:</h3>
-                <ul style={{ listStyleType: "none", padding: 0, marginTop:"20px" }}>
+                <ul
+                  style={{
+                    listStyleType: "none",
+                    padding: 0,
+                    marginTop: "20px",
+                  }}
+                >
                   {fileList.map((file) => (
                     <li
                       key={file.uid}
@@ -229,7 +271,9 @@ export default function App() {
                       }}
                     >
                       <span style={{ display: "flex", alignItems: "center" }}>
-                        <FileOutlined style={{ marginRight: "8px", color: "#0F5862" }} />
+                        <FileOutlined
+                          style={{ marginRight: "8px", color: "#0F5862" }}
+                        />
                         {file.name}
                       </span>
                       {/* Delete button */}
@@ -257,7 +301,11 @@ export default function App() {
               <Button
                 className="mt-4"
                 onClick={handleProceedToPreview}
-                style={{ backgroundColor: "#ffb100", color: "white", border: "none" }}
+                style={{
+                  backgroundColor: "#ffb100",
+                  color: "white",
+                  border: "none",
+                }}
               >
                 Proceed to Preview
               </Button>
@@ -269,7 +317,7 @@ export default function App() {
             <div style={{ width: "100%", marginTop: "20px" }}>
               <h2 className="text-lg font-bold text-[#0F5862]">File Preview</h2>
               <Table
-                dataSource={csvData.flatMap(fileData => fileData.data)}
+                dataSource={csvData.flatMap((fileData) => fileData.data)}
                 columns={columns}
                 rowKey={(record, index) => index}
                 pagination={{ pageSize: 5 }}
@@ -279,7 +327,8 @@ export default function App() {
               />
               {invalidData.length > 0 && (
                 <div style={{ color: "red", marginTop: "10px" }}>
-                  <strong>Error:</strong> There are empty cells in the table. Please fill them in before submitting.
+                  <strong>Error:</strong> There are empty cells in the table.
+                  Please fill them in before submitting.
                 </div>
               )}
               <Button
@@ -302,7 +351,10 @@ export default function App() {
                   backgroundColor: "#ffb100",
                   color: "white",
                   border: "none",
-                  cursor: invalidData.length > 0 || uploading ? "not-allowed" : "pointer",
+                  cursor:
+                    invalidData.length > 0 || uploading
+                      ? "not-allowed"
+                      : "pointer",
                 }}
               >
                 Submit
@@ -322,8 +374,18 @@ export default function App() {
                 position: "relative",
               }}
             >
-              <Spin size="large" style={{ position: "absolute", zIndex: 1, color: "#ffb100" }} />
-              <h1 style={{ marginTop: "100px", fontWeight: "bold", fontSize: "20px", color: "#" }}>
+              <Spin
+                size="large"
+                style={{ position: "absolute", zIndex: 1, color: "#ffb100" }}
+              />
+              <h1
+                style={{
+                  marginTop: "100px",
+                  fontWeight: "bold",
+                  fontSize: "20px",
+                  color: "#",
+                }}
+              >
                 Uploading...
               </h1>
             </div>

@@ -4,11 +4,13 @@ import { DeleteOutlined, FileOutlined } from "@ant-design/icons"; // Import File
 import Papa from "papaparse";
 import UploadImage from "./assets/upload.png";
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 function uploadCSV(file) {
   const formData = new FormData();
   formData.append("file", file);
 
-  fetch("http://localhost:8000/api/v2/places/bulk/file", {
+  fetch(`${BACKEND_URL}/api/v1/places/bulk/file`, {
     method: "POST",
     body: formData,
   })
